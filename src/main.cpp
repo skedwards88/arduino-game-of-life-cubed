@@ -34,18 +34,18 @@ const int DIRECTIONS[][3] = {
     {0, 1, 0},
     {0, 0, 1},
     // Vary xy, xz, or yz
-    {1, 1, 0},
-    {1, 0, 1},
-    {0, 1, 1},
-    {1, -1, 0},
-    {1, 0, -1},
-    {0, 1, -1},
+    // {1, 1, 0},
+    // {1, 0, 1},
+    // {0, 1, 1},
+    // {1, -1, 0},
+    // {1, 0, -1},
+    // {0, 1, -1},
     // Vary xyz
-    {1, 1, 1},
-    {1, -1, 1},
-    {1, 1, -1},
-    {-1, 1, 1}
-  };
+    // {1, 1, 1},
+    // {1, -1, 1},
+    // {1, 1, -1},
+    // {-1, 1, 1}
+};
 
 struct CubeState
 {
@@ -146,21 +146,41 @@ int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int po
   // todocolin--can change the conditions for life here
   // 0 = off, 1 = Color 1, 2 = Color 2, 3 = Color 1+2
   //
-  // if currently 0: if has exactly 2 non-0 neighbors -> becomes 1
-  if (currentValue == 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) == 2)
+  // Primary rules
+  if (currentValue == 0 && (numNeighborsWithState3) == 1)
+  {
+    return 3;
+  }
+  else if (currentValue == 0 && (numNeighborsWithState1) == 1)
   {
     return 1;
   }
+  else if (currentValue == 0 && (numNeighborsWithState2) == 1)
+  {
+    return 2;
+  }
   // if currently not 0: if has <2 non-0 neighbors -> becomes dead
-  else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) < 2)
+  // else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 5)
+  // {
+  //   return 0;
+  // }
+  // // if currently not 0: if has >3 non-0 neighbors -> becomes dead
+  else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 5)
   {
     return 0;
   }
-  // if currently not 0: if has >3 non-0 neighbors -> becomes dead
-  else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 3)
-  {
-    return 0;
-  }
+  //  else if (currentValue == 0)
+  //   {
+  //     return random(1, 4);
+  //   }
+  //   else if (currentValue == 0 && (numNeighborsWithState1) >= 4)
+  // {
+  //   return 2;
+  // }
+  //   else if (currentValue == 0 && (numNeighborsWithState2) >= 4)
+  // {
+  //   return 1;
+  // }
   // otherwise, unchanged
   else
   {
