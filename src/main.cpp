@@ -70,82 +70,56 @@ uint8_t getValueAtXYZ(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int 
   return cube[z][y * GRID_DIMENSION + x];
 }
 
+struct NeighborStateCounts
+{
+  int state0, state1, state2, state3;
+};
+
+NeighborStateCounts getNeighborStateCounts(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int layer)
+{
+  int counts[4] = {};
+
+  for (const auto &d : DIRECTIONS)
+  {
+    int dx = d[0];
+    int dy = d[1];
+    int dz = d[2];
+
+    int offsets[2][3] = {
+        {x + dx, y + dy, layer + dz},
+        {x - dx, y - dy, layer - dz}};
+
+    for (const auto &offset : offsets)
+    {
+      int neighborX = offset[0];
+      int neighborY = offset[1];
+      int neighborZ = offset[2];
+
+      bool neighborIsOffCube = neighborX < 0 || neighborY < 0 || neighborZ < 0 || neighborX >= GRID_DIMENSION || neighborY >= GRID_DIMENSION || neighborZ >= GRID_DIMENSION;
+
+      if (!neighborIsOffCube)
+      {
+        uint8_t neighborValue = getValueAtXYZ(cube, neighborX, neighborY, neighborZ);
+        counts[neighborValue]++;
+      }
+    }
+  }
+
+  return {counts[0], counts[1], counts[2], counts[3]};
+}
+
 int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
 {
   int x = position % GRID_DIMENSION;
   int y = position / GRID_DIMENSION; // C++ automatically rounds down for integer division, so no need for something like Math.floor()
   uint8_t currentValue = getValueAtXYZ(cube, x, y, layer);
 
-  int numNeighborsWithState0 = 0;
-  int numNeighborsWithState1 = 0;
-  int numNeighborsWithState2 = 0;
-  int numNeighborsWithState3 = 0;
+  NeighborStateCounts neighborStateCounts = getNeighborStateCounts(cube, x, y, layer);
 
-  for (const auto &d : DIRECTIONS)
-  {
-    // todo instead of storing 13 directions and doing math twice, could store the 26 neighbors and do math once. Or could consolidate the double mathing.
-    // todo using all 26 neighbors, but could reduce
-    int dx = d[0];
-    int dy = d[1];
-    int dz = d[2];
-
-    int neighbor1X = x + dx;
-    int neighbor1Y = y + dy;
-    int neighbor1Z = layer + dz;
-
-    bool neighbor1IsOffCube = neighbor1X < 0 || neighbor1Y < 0 || neighbor1Z < 0 || neighbor1X >= GRID_DIMENSION || neighbor1Y >= GRID_DIMENSION || neighbor1Z >= GRID_DIMENSION;
-    if (!neighbor1IsOffCube)
-    {
-
-      uint8_t neighbor1Value = getValueAtXYZ(cube, neighbor1X, neighbor1Y, neighbor1Z);
-
-      // todo can probably clean this up
-      if (neighbor1Value == 0)
-      {
-        numNeighborsWithState0++;
-      }
-      else if (neighbor1Value == 1)
-      {
-        numNeighborsWithState1++;
-      }
-      else if (neighbor1Value == 2)
-      {
-        numNeighborsWithState2++;
-      }
-      else if (neighbor1Value == 3)
-      {
-        numNeighborsWithState3++;
-      }
-    }
-
-    int neighbor2X = x - dx;
-    int neighbor2Y = y - dy;
-    int neighbor2Z = layer - dz;
-
-    bool neighbor2IsOffCube = neighbor2X < 0 || neighbor2Y < 0 || neighbor2Z < 0 || neighbor2X >= GRID_DIMENSION || neighbor2Y >= GRID_DIMENSION || neighbor2Z >= GRID_DIMENSION;
-
-    if (!neighbor2IsOffCube)
-    {
-      uint8_t neighbor2Value = getValueAtXYZ(cube, neighbor2X, neighbor2Y, neighbor2Z);
-
-      if (neighbor2Value == 0)
-      {
-        numNeighborsWithState0++;
-      }
-      else if (neighbor2Value == 1)
-      {
-        numNeighborsWithState1++;
-      }
-      else if (neighbor2Value == 2)
-      {
-        numNeighborsWithState2++;
-      }
-      else if (neighbor2Value == 3)
-      {
-        numNeighborsWithState3++;
-      }
-    }
-  }
+  int numNeighborsWithState0 = neighborStateCounts.state0;
+  int numNeighborsWithState1 = neighborStateCounts.state1;
+  int numNeighborsWithState2 = neighborStateCounts.state2;
+  int numNeighborsWithState3 = neighborStateCounts.state3;
 
   // todocolin--can change the conditions for life here
   // 0 = off, 1 = Color 1, 2 = Color 2, 3 = Color 1+2
@@ -163,29 +137,10 @@ int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int po
   {
     return 2;
   }
-  // if currently not 0: if has <2 non-0 neighbors -> becomes dead
-  // else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 5)
-  // {
-  //   return 0;
-  // }
-  // // if currently not 0: if has >3 non-0 neighbors -> becomes dead
   else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 5)
   {
     return 0;
   }
-  //  else if (currentValue == 0)
-  //   {
-  //     return random(1, 4);
-  //   }
-  //   else if (currentValue == 0 && (numNeighborsWithState1) >= 4)
-  // {
-  //   return 2;
-  // }
-  //   else if (currentValue == 0 && (numNeighborsWithState2) >= 4)
-  // {
-  //   return 1;
-  // }
-  // otherwise, unchanged
   else
   {
     return currentValue;
@@ -325,11 +280,13 @@ void setup()
     }
   }
 
-  if (START_MODE == 1) {
+  if (START_MODE == 1)
+  {
     cubeState.cube[3][0] = random(randomMin, randomMax);
   }
 
-  if (START_MODE == 2) {
+  if (START_MODE == 2)
+  {
     uint8_t randomIndex = random(0, NUM_LAYERS * NUM_POSITIONS);
     uint8_t randomLayer = randomIndex / NUM_POSITIONS;
     uint8_t randomPosition = randomIndex % NUM_POSITIONS;
