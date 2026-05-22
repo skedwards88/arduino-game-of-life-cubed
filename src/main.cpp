@@ -17,6 +17,7 @@ const int LAYER2_PIN = 4;
 const int LAYER3_PIN = 5;
 const int layerPins[NUM_LAYERS] = {LAYER0_PIN, LAYER1_PIN, LAYER2_PIN, LAYER3_PIN};
 
+// todoColin set cycle time
 // Duration that each cube state is held for
 const unsigned long CYCLE_TIME_MS = 1000;
 
@@ -57,6 +58,9 @@ struct CubeState
   // Cache the bytes to display for each layer
   // since the bytes are rendered much more frequently than they change
   uint8_t cachedLayerBytes[NUM_LAYERS][NUM_SHIFT_REGISTERS];
+
+  // todo check that this is the right variable type
+  long numSteps;
 };
 
 static CubeState cubeState;
@@ -66,7 +70,7 @@ uint8_t getValueAtXYZ(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int 
   return cube[z][y * GRID_DIMENSION + x];
 }
 
-int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position)
+int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
 {
   int x = position % GRID_DIMENSION;
   int y = position / GRID_DIMENSION; // C++ automatically rounds down for integer division, so no need for something like Math.floor()
@@ -145,7 +149,7 @@ int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int po
 
   // todocolin--can change the conditions for life here
   // 0 = off, 1 = Color 1, 2 = Color 2, 3 = Color 1+2
-  //
+  // numSteps can be set
   // Primary rules
   if (currentValue == 0 && (numNeighborsWithState3) == 1)
   {
@@ -252,6 +256,8 @@ void renderCube(CubeState &cubeState)
 
 void updateCube(CubeState &cubeState)
 {
+  cubeState.numSteps++;
+
   // Make the updates based on the initial state, THEN update the cube state
   uint8_t nextCube[NUM_LAYERS][NUM_POSITIONS];
 
@@ -259,7 +265,7 @@ void updateCube(CubeState &cubeState)
   {
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      nextCube[layer][position] = getNewState(cubeState.cube, layer, position);
+      nextCube[layer][position] = getNewState(cubeState.cube, layer, position, cubeState.numSteps);
     }
   }
 
@@ -298,20 +304,54 @@ void setup()
   }
   disableAllLayers();
 
+  cubeState.numSteps = 0;
+
+  // todocolin -- can be:
+  // 0 = random seeding for all spots
+  // 1 = top left is random color, all others off
+  // 2 = single spot is random color, all others off
+  const int START_MODE = 1;
+  // todocolin--can change the initial color here. random() is min inclusive, max exclusive
+  int randomMin = 1;
+  int randomMax = 2;
+
   for (int layer = 0; layer < NUM_LAYERS; layer++)
   {
     // Initialize the cube randomly
-    // random() is min inclusive, max exclusive
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      // todocolin--can change the initial state here. random() is min inclusive, max exclusive
-      cubeState.cube[layer][position] = random(0, 4); // todo can max be set to a variable?
+      // all off unless start mode is 0
+      cubeState.cube[layer][position] = START_MODE == 0 ? random(randomMin, randomMax) : 0;
     }
+  }
 
-    // Just set the cached bytes to all off; it will update on the schedule
-    for (int b = 0; b < NUM_SHIFT_REGISTERS; b++)
+  if (START_MODE == 1) {
+    cubeState.cube[3][0] = random(randomMin, randomMax);
+  }
+
+  if (START_MODE == 2) {
+    uint8_t randomIndex = random(0, NUM_LAYERS * NUM_POSITIONS);
+    uint8_t randomLayer = randomIndex / NUM_POSITIONS;
+    uint8_t randomPosition = randomIndex % NUM_POSITIONS;
+
+    cubeState.cube[randomLayer][randomPosition] = random(randomMin, randomMax);
+  }
+
+  for (int layer = 0; layer < NUM_LAYERS; layer++)
+  {
+    // clear the cached bytes
+    for (uint8_t b = 0; b < NUM_SHIFT_REGISTERS; b++)
     {
       cubeState.cachedLayerBytes[layer][b] = 0;
+    }
+
+    for (int position = 0; position < NUM_POSITIONS; position++)
+    {
+
+      bool color1IsOn = cubeState.cube[layer][position] == 1 || cubeState.cube[layer][position] == 3;
+      bool color2IsOn = cubeState.cube[layer][position] == 2 || cubeState.cube[layer][position] == 3;
+
+      setBytes(position, color1IsOn, color2IsOn, cubeState.cachedLayerBytes[layer]);
     }
   }
 }
