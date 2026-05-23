@@ -1,37 +1,11 @@
 #include "Arduino.h"
-
-const int GRID_DIMENSION = 4;
-const int NUM_LAYERS = GRID_DIMENSION;
-const int NUM_POSITIONS = 16;      // Positions (bicolor LEDs) per layer
-const int NUM_SHIFT_REGISTERS = 4; // 16 bicolor LEDs = 32 leads; 8 leads controlled by 1 shift register
-
-// Pins for the first shift register
-const int CLOCK_PIN = 6;
-const int LATCH_PIN = 7;
-const int DATA_PIN = 8;
-
-// Pins for the layers
-const int LAYER0_PIN = 2;
-const int LAYER1_PIN = 3;
-const int LAYER2_PIN = 4;
-const int LAYER3_PIN = 5;
-const int layerPins[NUM_LAYERS] = {LAYER0_PIN, LAYER1_PIN, LAYER2_PIN, LAYER3_PIN};
-
-// todoColin set cycle time
-// Duration that each cube state is held for
-const unsigned long CYCLE_TIME_MS = 1000;
-
-// Duration that each display is shown for
-const unsigned long DISPlAY_TIME_MS = 6000;
-
-// Duration that each layer is turned on
-// Note this is microseconds, not milliseconds
-const unsigned int LAYER_ON_TIME_US = 800;
+#include "constants.h"
+#include "displays.h"
 
 // These are the possible directions from a position
 // (consider a line with between each of these coordinates and
 // the coordinate {0,0,0} representing the position).
-// todocolin--can omit some directions if desired
+// todo can delete
 const int DIRECTIONS[][3] = {
     // Vary just x, y, or z
     {1, 0, 0},
@@ -69,122 +43,6 @@ struct CubeState
 };
 
 static CubeState cubeState;
-
-struct DisplayConfig
-{
-  // 0 = random seeding for all spots
-  // 1 = top left is random color, all others off
-  // 2 = single spot is random color, all others off
-  int startMode;
-
-  // Control the initial colors
-  int startMin;
-  int startMax;
-
-  int (*getNewStateFn)(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps);
-};
-
-uint8_t getValueAtXYZ(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int z)
-{
-  return cube[z][y * GRID_DIMENSION + x];
-}
-
-struct NeighborStateCounts
-{
-  int state0, state1, state2, state3;
-};
-
-template <int N> // this lets the compiler deduce the size of the directions array
-NeighborStateCounts getNeighborStateCounts(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int layer, const int (&directions)[N][3])
-{
-  int counts[4] = {};
-
-  for (const auto &d : directions)
-  {
-    int dx = d[0];
-    int dy = d[1];
-    int dz = d[2];
-
-    int offsets[2][3] = {
-        {x + dx, y + dy, layer + dz},
-        {x - dx, y - dy, layer - dz}};
-
-    for (const auto &offset : offsets)
-    {
-      int neighborX = offset[0];
-      int neighborY = offset[1];
-      int neighborZ = offset[2];
-
-      bool neighborIsOffCube = neighborX < 0 || neighborY < 0 || neighborZ < 0 || neighborX >= GRID_DIMENSION || neighborY >= GRID_DIMENSION || neighborZ >= GRID_DIMENSION;
-
-      if (!neighborIsOffCube)
-      {
-        uint8_t neighborValue = getValueAtXYZ(cube, neighborX, neighborY, neighborZ);
-        counts[neighborValue]++;
-      }
-    }
-  }
-
-  return {counts[0], counts[1], counts[2], counts[3]};
-}
-
-int getNewState1(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
-{
-  return 2;
-};
-
-int getNewState2(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
-{
-  int x = position % GRID_DIMENSION;
-  int y = position / GRID_DIMENSION; // C++ automatically rounds down for integer division, so no need for something like Math.floor()
-  uint8_t currentValue = getValueAtXYZ(cube, x, y, layer);
-
-  int directions[][3] = {
-      {1, 0, 0},
-      {0, 1, 0},
-      {0, 0, 1},
-  };
-
-  NeighborStateCounts neighborStateCounts = getNeighborStateCounts(cube, x, y, layer, directions);
-
-  int numNeighborsWithState0 = neighborStateCounts.state0;
-  int numNeighborsWithState1 = neighborStateCounts.state1;
-  int numNeighborsWithState2 = neighborStateCounts.state2;
-  int numNeighborsWithState3 = neighborStateCounts.state3;
-
-  // todocolin--can change the conditions for life here
-  // 0 = off, 1 = Color 1, 2 = Color 2, 3 = Color 1+2
-  // numSteps can be set
-  // Primary rules
-  if (currentValue == 0 && (numNeighborsWithState3) == 1)
-  {
-    return 3;
-  }
-  else if (currentValue == 0 && (numNeighborsWithState1) == 1)
-  {
-    return 1;
-  }
-  else if (currentValue == 0 && (numNeighborsWithState2) == 1)
-  {
-    return 2;
-  }
-  else if (currentValue != 0 && (numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) > 5)
-  {
-    return 0;
-  }
-  else
-  {
-    return currentValue;
-  }
-}
-
-const DisplayConfig DISPLAYS[] = {
-    {1, 1, 2, getNewState1},
-    {2, 1, 3, getNewState2},
-    // todo more displays would be added here
-};
-
-const int NUM_DISPLAYS = sizeof(DISPLAYS) / sizeof(DISPLAYS[0]);
 
 void disableAllLayers()
 {
@@ -295,17 +153,17 @@ void initCube()
     // Initialize the cube randomly
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      // all off unless start mode is 0
-      cubeState.cube[layer][position] = config.startMode == 0 ? random(config.startMin, config.startMax + 1) : 0;
+      // all off unless start mode is random
+      cubeState.cube[layer][position] = config.startMode == ALL_RANDOM ? random(config.startMin, config.startMax + 1) : 0;
     }
   }
 
-  if (config.startMode == 1)
+  if (config.startMode == TOP_LEFT)
   {
     cubeState.cube[3][0] = random(config.startMin, config.startMax + 1);
   }
 
-  if (config.startMode == 2)
+  if (config.startMode == SINGLE_RANDOM)
   {
     uint8_t randomIndex = random(0, NUM_LAYERS * NUM_POSITIONS);
     uint8_t randomLayer = randomIndex / NUM_POSITIONS;
@@ -358,13 +216,14 @@ void loop()
   static unsigned long lastCycleUpdate = 0;
   static unsigned long lastDisplaySwitch = 0;
 
-  if (now - lastDisplaySwitch >= DISPlAY_TIME_MS) {
+  if (now - lastDisplaySwitch >= DISPlAY_TIME_MS)
+  {
     lastDisplaySwitch = now;
     cubeState.currentDisplay = (cubeState.currentDisplay + 1) % NUM_DISPLAYS;
     initCube();
   }
 
-  if (now - lastCycleUpdate >= CYCLE_TIME_MS)
+  if (now - lastCycleUpdate >= DISPLAYS[cubeState.currentDisplay].cycleTimeMs)
   {
     lastCycleUpdate = now;
     updateCube(cubeState);
