@@ -21,6 +21,9 @@ const int layerPins[NUM_LAYERS] = {LAYER0_PIN, LAYER1_PIN, LAYER2_PIN, LAYER3_PI
 // Duration that each cube state is held for
 const unsigned long CYCLE_TIME_MS = 1000;
 
+// Duration that each display is shown for
+const unsigned long DISPlAY_TIME_MS = 6000;
+
 // Duration that each layer is turned on
 // Note this is microseconds, not milliseconds
 const unsigned int LAYER_ON_TIME_US = 800;
@@ -61,9 +64,25 @@ struct CubeState
 
   // todo check that this is the right variable type
   long numSteps;
+
+  int currentDisplay;
 };
 
 static CubeState cubeState;
+
+struct DisplayConfig
+{
+  // 0 = random seeding for all spots
+  // 1 = top left is random color, all others off
+  // 2 = single spot is random color, all others off
+  int startMode;
+
+  // Control the initial colors
+  int startMin;
+  int startMax;
+
+  int (*getNewStateFn)(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps);
+};
 
 uint8_t getValueAtXYZ(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int z)
 {
@@ -75,11 +94,12 @@ struct NeighborStateCounts
   int state0, state1, state2, state3;
 };
 
-NeighborStateCounts getNeighborStateCounts(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int layer)
+template <int N> // this lets the compiler deduce the size of the directions array
+NeighborStateCounts getNeighborStateCounts(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int layer, const int (&directions)[N][3])
 {
   int counts[4] = {};
 
-  for (const auto &d : DIRECTIONS)
+  for (const auto &d : directions)
   {
     int dx = d[0];
     int dy = d[1];
@@ -108,13 +128,24 @@ NeighborStateCounts getNeighborStateCounts(const uint8_t cube[NUM_LAYERS][NUM_PO
   return {counts[0], counts[1], counts[2], counts[3]};
 }
 
-int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
+int getNewState1(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
+{
+  return 2;
+};
+
+int getNewState2(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
 {
   int x = position % GRID_DIMENSION;
   int y = position / GRID_DIMENSION; // C++ automatically rounds down for integer division, so no need for something like Math.floor()
   uint8_t currentValue = getValueAtXYZ(cube, x, y, layer);
 
-  NeighborStateCounts neighborStateCounts = getNeighborStateCounts(cube, x, y, layer);
+  int directions[][3] = {
+      {1, 0, 0},
+      {0, 1, 0},
+      {0, 0, 1},
+  };
+
+  NeighborStateCounts neighborStateCounts = getNeighborStateCounts(cube, x, y, layer, directions);
 
   int numNeighborsWithState0 = neighborStateCounts.state0;
   int numNeighborsWithState1 = neighborStateCounts.state1;
@@ -146,6 +177,14 @@ int getNewState(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int po
     return currentValue;
   }
 }
+
+const DisplayConfig DISPLAYS[] = {
+    {1, 1, 2, getNewState1},
+    {2, 1, 3, getNewState2},
+    // todo more displays would be added here
+};
+
+const int NUM_DISPLAYS = sizeof(DISPLAYS) / sizeof(DISPLAYS[0]);
 
 void disableAllLayers()
 {
@@ -220,7 +259,7 @@ void updateCube(CubeState &cubeState)
   {
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      nextCube[layer][position] = getNewState(cubeState.cube, layer, position, cubeState.numSteps);
+      nextCube[layer][position] = DISPLAYS[cubeState.currentDisplay].getNewStateFn(cubeState.cube, layer, position, cubeState.numSteps);
     }
   }
 
@@ -245,30 +284,11 @@ void updateCube(CubeState &cubeState)
   }
 }
 
-void setup()
+void initCube()
 {
-  // initialize the pseudo-random number generator
-  randomSeed(analogRead(A4)); // Note: this should use a floating/unused pin
-
-  pinMode(LATCH_PIN, OUTPUT);
-  pinMode(CLOCK_PIN, OUTPUT);
-  pinMode(DATA_PIN, OUTPUT);
-  for (int layer = 0; layer < NUM_LAYERS; layer++)
-  {
-    pinMode(layerPins[layer], OUTPUT);
-  }
-  disableAllLayers();
+  const DisplayConfig &config = DISPLAYS[cubeState.currentDisplay];
 
   cubeState.numSteps = 0;
-
-  // todocolin -- can be:
-  // 0 = random seeding for all spots
-  // 1 = top left is random color, all others off
-  // 2 = single spot is random color, all others off
-  const int START_MODE = 1;
-  // todocolin--can change the initial color here. random() is min inclusive, max exclusive
-  int randomMin = 1;
-  int randomMax = 2;
 
   for (int layer = 0; layer < NUM_LAYERS; layer++)
   {
@@ -276,22 +296,22 @@ void setup()
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
       // all off unless start mode is 0
-      cubeState.cube[layer][position] = START_MODE == 0 ? random(randomMin, randomMax) : 0;
+      cubeState.cube[layer][position] = config.startMode == 0 ? random(config.startMin, config.startMax + 1) : 0;
     }
   }
 
-  if (START_MODE == 1)
+  if (config.startMode == 1)
   {
-    cubeState.cube[3][0] = random(randomMin, randomMax);
+    cubeState.cube[3][0] = random(config.startMin, config.startMax + 1);
   }
 
-  if (START_MODE == 2)
+  if (config.startMode == 2)
   {
     uint8_t randomIndex = random(0, NUM_LAYERS * NUM_POSITIONS);
     uint8_t randomLayer = randomIndex / NUM_POSITIONS;
     uint8_t randomPosition = randomIndex % NUM_POSITIONS;
 
-    cubeState.cube[randomLayer][randomPosition] = random(randomMin, randomMax);
+    cubeState.cube[randomLayer][randomPosition] = random(config.startMin, config.startMax + 1);
   }
 
   for (int layer = 0; layer < NUM_LAYERS; layer++)
@@ -313,10 +333,36 @@ void setup()
   }
 }
 
+void setup()
+{
+  // initialize the pseudo-random number generator
+  randomSeed(analogRead(A4)); // Note: this should use a floating/unused pin
+
+  pinMode(LATCH_PIN, OUTPUT);
+  pinMode(CLOCK_PIN, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
+  for (int layer = 0; layer < NUM_LAYERS; layer++)
+  {
+    pinMode(layerPins[layer], OUTPUT);
+  }
+  disableAllLayers();
+
+  cubeState.currentDisplay = 0;
+
+  initCube();
+}
+
 void loop()
 {
   unsigned long now = millis();
   static unsigned long lastCycleUpdate = 0;
+  static unsigned long lastDisplaySwitch = 0;
+
+  if (now - lastDisplaySwitch >= DISPlAY_TIME_MS) {
+    lastDisplaySwitch = now;
+    cubeState.currentDisplay = (cubeState.currentDisplay + 1) % NUM_DISPLAYS;
+    initCube();
+  }
 
   if (now - lastCycleUpdate >= CYCLE_TIME_MS)
   {
