@@ -13,8 +13,7 @@ enum CubeMode
   DISPLAY_MODE
 };
 
-// don't need static since used extern in the file that defines the struct
-DisplayState displayState;
+DisplayState displayState; // don't need static since used extern in the file that defines the struct
 
 static GameState gameState;
 

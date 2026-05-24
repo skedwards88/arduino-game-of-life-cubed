@@ -1,6 +1,4 @@
-Immediate neighbors  -  (vary just x, y, or z)
-
-
+## Immediate neighbors  -  (vary just x, y, or z)
 
 Conditional trio  -  cube state random (1, 4)  -  cycle time 250ms
 Note: sometimes freezes after many cycles
@@ -106,7 +104,7 @@ if (currentValue == 2 && (numNeighborsWithState1) > 0)
 
 
 
-Diagonal and immediate neighbors  -  (vary just x, y, or z or two of each)
+## Diagonal and immediate neighbors  -  (vary just x, y, or z or two of each)
 
 Succession  -  cube state random (1, 3)  -  cycle time 1000ms
 Note: eventually blue or red wins out, or stabilizes
@@ -135,11 +133,7 @@ if (currentValue == 2 && (numNeighborsWithState1) > 1)
    return currentValue;
  }
 
-
-
-
-
-Single Start Spot
+## Single Start Spot
 
 Diagonal Waves  -  cycle time 800ms
 
@@ -371,5 +365,3 @@ Snake (in progress)
 
    {return currentValue;} // default is blank, not currentValue
 }
-
-Da Code!!!
