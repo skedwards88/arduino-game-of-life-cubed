@@ -2,19 +2,6 @@
 #include "Arduino.h"
 #include "constants.h"
 
-inline uint8_t getValueAt(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int x, int y, int z)
-{
-  return cube[z][y * GRID_DIMENSION + x];
-}
-
-inline uint8_t getValueAt(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position)
-{
-  int x = position % GRID_DIMENSION;
-  int y = position / GRID_DIMENSION; // C++ automatically rounds down for integer division, so no need for something like Math.floor()
-
-  return getValueAt(cube, x, y, layer);
-}
-
 struct NeighborStateCounts
 {
   int state0, state1, state2, state3;

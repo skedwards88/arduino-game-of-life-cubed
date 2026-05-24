@@ -1,9 +1,11 @@
+#pragma once
 #include "Arduino.h"
-#include "displayConfig.h"
+#include "displayMode/displayConfig.h"
 #include "constants.h"
 #include "getNeighborStateCounts.h"
+#include "shared.h"
 
-static int simpleDuo(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps)
+static int simpleDuo(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, unsigned long numSteps)
 {
 
   int directions[][3] = {

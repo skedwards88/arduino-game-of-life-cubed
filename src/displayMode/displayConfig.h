@@ -20,5 +20,5 @@ struct DisplayConfig
   // Duration that each cube state is held for
   unsigned long cycleTimeMs;
 
-  int (*getNewStateFn)(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, long numSteps);
+  int (*getNewStateFn)(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, unsigned long numSteps);
 };

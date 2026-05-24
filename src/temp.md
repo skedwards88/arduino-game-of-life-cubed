@@ -1,29 +1,6 @@
 Immediate neighbors  -  (vary just x, y, or z)
 
 
-Simple duo  -  cube state random (1, 3)  -  cycle time 1000ms
- if ((numNeighborsWithState2) == 1)
- {
-   return 2;
- }
- else
- {
-   return 1;
- }
-
-Simple trio  -  cube state random (1, 4)  -  cycle time 1000ms
- if ((numNeighborsWithState2) == 1)
- {
-   return 2;
- }
-   if ((numNeighborsWithState3) == 1)
- {
-   return 3;
- }
- else
- {
-   return 1;
- }
 
 Conditional trio  -  cube state random (1, 4)  -  cycle time 250ms
 Note: sometimes freezes after many cycles
@@ -326,7 +303,7 @@ Red "shot" propagates as purple and turns blue if it hits the other side (if it 
  {
    return 3; // red sparks propagate as purple, purple continues to propagate
  }
-   else  
+   else
  {
    return 0; // default is blank, not currentValue
  }
@@ -365,7 +342,7 @@ Snake (in progress)
 1 corner starts as red
  if (currentValue == 1)
    {return 2;}  // purple head turns to blue
-  
+
  else if (currentValue == 0 && numNeighborsWithState1 > 0 && (numNeighborsWithState0 + numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) == 4 && (numSteps+6)%7 ==0)
    {return random(0,2);}  // at second step in cycle, head moves to edge spot(s) randomly
   else if (currentValue == 0 && numNeighborsWithState1 > 0 && (numNeighborsWithState0 + numNeighborsWithState1 + numNeighborsWithState2 + numNeighborsWithState3) == 5 && (numSteps+5)%7 ==0)
@@ -396,5 +373,3 @@ Snake (in progress)
 }
 
 Da Code!!!
-
-
