@@ -2,7 +2,7 @@
 #include "constants.h"
 #include "shared.h"
 #include "displayMode/displays.h"
-#include "displayMode/cubeState.h"
+#include "displayMode/displayState.h"
 #include "displayMode/displayLogic.h"
 #include "connect4Mode/gameState.h"
 #include "connect4Mode/gameLogic.h"
@@ -14,7 +14,7 @@ enum CubeMode
 };
 
 // don't need static since used extern in the file that defines the struct
-CubeState cubeState; // todo rename cubestate to displaystate
+DisplayState displayState;
 
 static GameState gameState;
 
@@ -44,7 +44,7 @@ void setup()
   currentMode = DISPLAY_MODE;
 
   // Display mode init
-  cubeState.currentDisplay = 0;
+  displayState.currentDisplay = 0;
   initializeDisplay();
 
   // Game mode init
@@ -76,17 +76,17 @@ void loop()
     if (now - lastDisplaySwitch >= DISPlAY_TIME_MS)
     {
       lastDisplaySwitch = now;
-      cubeState.currentDisplay = (cubeState.currentDisplay + 1) % NUM_DISPLAYS;
+      displayState.currentDisplay = (displayState.currentDisplay + 1) % NUM_DISPLAYS;
       initializeDisplay();
     }
 
-    if (now - lastCycleUpdate >= DISPLAYS[cubeState.currentDisplay].cycleTimeMs)
+    if (now - lastCycleUpdate >= DISPLAYS[displayState.currentDisplay].cycleTimeMs)
     {
       lastCycleUpdate = now;
-      updateCube(cubeState);
+      updateCube(displayState);
     }
 
-    renderCube(cubeState);
+    renderCube(displayState);
   }
   else if (currentMode == GAME_MODE)
   {

@@ -1,17 +1,17 @@
 #pragma once
 #include "Arduino.h"
 #include "../constants.h"
-#include "cubeState.h"
+#include "displayState.h"
 #include "./shared.h"
 #include "displays.h"
 
 // Refreshes one layer when called
 // Should call as often as possible
-void renderCube(CubeState &cubeState)
+void renderCube(DisplayState &displayState)
 {
   static uint8_t currentLayer = 0;
 
-  renderLEDsForLayer(currentLayer, cubeState.cachedLayerBytes[currentLayer]);
+  renderLEDsForLayer(currentLayer, displayState.cachedLayerBytes[currentLayer]);
 
   // Hold it briefly
   delayMicroseconds(LAYER_ON_TIME_US);
@@ -24,9 +24,9 @@ void renderCube(CubeState &cubeState)
   }
 }
 
-void updateCube(CubeState &cubeState)
+void updateCube(DisplayState &displayState)
 {
-  cubeState.numSteps++;
+  displayState.numSteps++;
 
   // Make the updates based on the initial state, THEN update the cube state
   uint8_t nextCube[NUM_LAYERS][NUM_POSITIONS];
@@ -35,7 +35,7 @@ void updateCube(CubeState &cubeState)
   {
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      nextCube[layer][position] = DISPLAYS[cubeState.currentDisplay].getNewStateFn(cubeState.cube, layer, position, cubeState.numSteps);
+      nextCube[layer][position] = DISPLAYS[displayState.currentDisplay].getNewStateFn(displayState.cube, layer, position, displayState.numSteps);
     }
   }
 
@@ -45,26 +45,26 @@ void updateCube(CubeState &cubeState)
     // clear the cached bytes
     for (uint8_t b = 0; b < NUM_SHIFT_REGISTERS; b++)
     {
-      cubeState.cachedLayerBytes[layer][b] = 0;
+      displayState.cachedLayerBytes[layer][b] = 0;
     }
 
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
-      cubeState.cube[layer][position] = nextCube[layer][position];
+      displayState.cube[layer][position] = nextCube[layer][position];
 
       bool color1IsOn = nextCube[layer][position] == 1 || nextCube[layer][position] == 3;
       bool color2IsOn = nextCube[layer][position] == 2 || nextCube[layer][position] == 3;
 
-      setBytes(position, color1IsOn, color2IsOn, cubeState.cachedLayerBytes[layer]);
+      setBytes(position, color1IsOn, color2IsOn, displayState.cachedLayerBytes[layer]);
     }
   }
 }
 
 void initializeDisplay()
 {
-  const DisplayConfig &config = DISPLAYS[cubeState.currentDisplay];
+  const DisplayConfig &config = DISPLAYS[displayState.currentDisplay];
 
-  cubeState.numSteps = 0;
+  displayState.numSteps = 0;
 
   for (int layer = 0; layer < NUM_LAYERS; layer++)
   {
@@ -72,13 +72,13 @@ void initializeDisplay()
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
       // all off unless start mode is random
-      cubeState.cube[layer][position] = config.startMode == ALL_RANDOM ? random(config.startMin, config.startMax + 1) : 0;
+      displayState.cube[layer][position] = config.startMode == ALL_RANDOM ? random(config.startMin, config.startMax + 1) : 0;
     }
   }
 
   if (config.startMode == TOP_LEFT)
   {
-    cubeState.cube[3][0] = random(config.startMin, config.startMax + 1);
+    displayState.cube[3][0] = random(config.startMin, config.startMax + 1);
   }
 
   if (config.startMode == SINGLE_RANDOM)
@@ -87,7 +87,7 @@ void initializeDisplay()
     uint8_t randomLayer = randomIndex / NUM_POSITIONS;
     uint8_t randomPosition = randomIndex % NUM_POSITIONS;
 
-    cubeState.cube[randomLayer][randomPosition] = random(config.startMin, config.startMax + 1);
+    displayState.cube[randomLayer][randomPosition] = random(config.startMin, config.startMax + 1);
   }
 
   for (int layer = 0; layer < NUM_LAYERS; layer++)
@@ -95,16 +95,16 @@ void initializeDisplay()
     // clear the cached bytes
     for (uint8_t b = 0; b < NUM_SHIFT_REGISTERS; b++)
     {
-      cubeState.cachedLayerBytes[layer][b] = 0;
+      displayState.cachedLayerBytes[layer][b] = 0;
     }
 
     for (int position = 0; position < NUM_POSITIONS; position++)
     {
 
-      bool color1IsOn = cubeState.cube[layer][position] == 1 || cubeState.cube[layer][position] == 3;
-      bool color2IsOn = cubeState.cube[layer][position] == 2 || cubeState.cube[layer][position] == 3;
+      bool color1IsOn = displayState.cube[layer][position] == 1 || displayState.cube[layer][position] == 3;
+      bool color2IsOn = displayState.cube[layer][position] == 2 || displayState.cube[layer][position] == 3;
 
-      setBytes(position, color1IsOn, color2IsOn, cubeState.cachedLayerBytes[layer]);
+      setBytes(position, color1IsOn, color2IsOn, displayState.cachedLayerBytes[layer]);
     }
   }
 }

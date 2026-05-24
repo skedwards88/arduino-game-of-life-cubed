@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "../constants.h"
 
-struct CubeState
+struct DisplayState
 {
   // Cube representation
   // The cube is made of bicolor LEDs
@@ -18,4 +18,4 @@ struct CubeState
   int currentDisplay;
 };
 
-extern CubeState cubeState;
+extern DisplayState displayState;
