@@ -5,7 +5,7 @@
 #include "getNeighborStateCounts.h"
 #include "shared.h"
 
-static int todoFuncName(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, unsigned long numSteps)
+static int toDo(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer, int position, unsigned long numSteps)
 {
 
   // Do some things and return an int
@@ -34,9 +34,9 @@ static int todoFuncName(const uint8_t cube[NUM_LAYERS][NUM_POSITIONS], int layer
   return 0;
 }
 
-const DisplayConfig TODO_DISPLAY_NAME = {
+const DisplayConfig TODO = {
     .startMode = ALL_RANDOM,
     .startMin = 1,
     .startMax = 2,
     .cycleTimeMs = 1000,
-    .getNewStateFn = todoFuncName};
+    .getNewStateFn = toDo};
