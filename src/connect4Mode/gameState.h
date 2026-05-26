@@ -9,6 +9,12 @@ enum GameStatus : uint8_t
   STALEMATE = 2
 };
 
+enum GameMode
+{
+  LAYERS, // player is restricted to a randomly selected layer
+  DROP    // cursor drops to lowest unoccupied layer
+};
+
 struct GameState
 {
   // Board representation
@@ -32,6 +38,8 @@ struct GameState
   uint16_t winMask[NUM_LAYERS];
 
   GameStatus status;
+
+  GameMode gameMode;
 
   // The game freezes at the end to display the win/stalemate animation
   unsigned long frozenUntilMs;

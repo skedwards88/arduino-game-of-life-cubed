@@ -19,7 +19,7 @@ void initializeGameState(GameState &gameState)
   }
 
   // random is min inclusive, max exclusive
-  gameState.activeLayer = random(0, NUM_LAYERS);
+  gameState.activeLayer = gameState.gameMode == LAYERS ? random(0, NUM_LAYERS) : 0;
   gameState.cursorPosition = random(0, NUM_POSITIONS);
   gameState.blinkIsOn = false;
   gameState.lastBlinkMs = 0;
@@ -28,6 +28,18 @@ void initializeGameState(GameState &gameState)
   gameState.isPlayer1Turn = false;
   gameState.status = IN_PROGRESS;
   gameState.frozenUntilMs = 0;
+}
+
+uint8_t getLowestUnoccupiedLayer(const GameState &gameState)
+{
+  for (uint8_t layer = 0; layer < NUM_LAYERS; layer++)
+  {
+    if (!gameState.board[layer][gameState.cursorPosition])
+    {
+      return layer;
+    }
+  }
+  return NUM_LAYERS - 1; // if all layers full at cursor position, return top layer
 }
 
 void updateCursorPosition(GameState &gameState)
@@ -79,6 +91,12 @@ void updateCursorPosition(GameState &gameState)
     if (newRow != oldRow || newColumn != oldColumn)
     {
       gameState.cursorPosition = (newRow * GRID_DIMENSION) + newColumn;
+
+      if (gameState.gameMode == DROP)
+      {
+        gameState.activeLayer = getLowestUnoccupiedLayer(gameState);
+      }
+
       gameState.cacheIsDirty[gameState.activeLayer] = true;
     }
 
@@ -344,8 +362,11 @@ void updateBoard(GameState &gameState)
     gameState.board[gameState.activeLayer][gameState.cursorPosition] = gameState.isPlayer1Turn ? 1 : 2;
     gameState.cacheIsDirty[gameState.activeLayer] = true;
 
-    // Record captures
-    updatePotentialCaptures(gameState);
+    // Record captures (only if in "layers" mode)
+    if (gameState.gameMode == LAYERS)
+    {
+      updatePotentialCaptures(gameState);
+    }
 
     // Check for game over (win or stalemate)
     updatePotentialGameOver(gameState);
@@ -357,8 +378,8 @@ void updateBoard(GameState &gameState)
 
       // Choose a new layer and position
       uint8_t nextIndex = selectRandomEmptyIndex(gameState.board);
-      gameState.activeLayer = nextIndex / NUM_POSITIONS;
       gameState.cursorPosition = nextIndex % NUM_POSITIONS;
+      gameState.activeLayer = gameState.gameMode == DROP ? getLowestUnoccupiedLayer(gameState) : nextIndex / NUM_POSITIONS;
       gameState.cacheIsDirty[gameState.activeLayer] = true;
     }
   }

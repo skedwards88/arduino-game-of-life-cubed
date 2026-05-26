@@ -47,6 +47,7 @@ void setup()
   initializeDisplay();
 
   // Game mode init
+  gameState.gameMode = DROP;
   initializeGameState(gameState);
 }
 
@@ -55,20 +56,44 @@ void loop()
   unsigned long now = millis();
   static int lastSetButtonValue = HIGH;
   static unsigned long lastSetButtonPressMs = 0;
+  static int lastResetButtonValue = HIGH;
+  static unsigned long lastResetButtonPressMs = 0;
   static unsigned long lastCycleUpdate = 0;
   static unsigned long lastDisplaySwitch = 0;
 
+  // The 'set' button switches between display and game mode
   int setButtonValue = digitalRead(SET_PIN);
 
   if (setButtonValue == LOW && lastSetButtonValue == HIGH && (now - lastSetButtonPressMs) > DEBOUNCE_MS)
   {
     lastSetButtonPressMs = now;
 
-    // toggle between display mode and game mode
     currentMode = currentMode == DISPLAY_MODE ? GAME_MODE : DISPLAY_MODE;
   }
 
   lastSetButtonValue = setButtonValue;
+
+  // The 'reset' button switches between displays if in display mode or game modes if in game mode
+  int resetButtonValue = digitalRead(RESET_PIN);
+
+  if (resetButtonValue == LOW && lastResetButtonValue == HIGH && (now - lastResetButtonPressMs) > DEBOUNCE_MS)
+  {
+    lastResetButtonPressMs = now;
+
+    if (currentMode == GAME_MODE)
+    {
+      gameState.gameMode = gameState.gameMode == LAYERS ? DROP : LAYERS;
+      initializeGameState(gameState);
+    }
+    else if (currentMode == DISPLAY_MODE)
+    {
+      lastDisplaySwitch = now;
+      displayState.currentDisplay = (displayState.currentDisplay + 1) % NUM_DISPLAYS;
+      initializeDisplay();
+    }
+  }
+
+  lastResetButtonValue = resetButtonValue;
 
   if (currentMode == DISPLAY_MODE)
   {
